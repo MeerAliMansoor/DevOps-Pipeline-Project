@@ -44,6 +44,24 @@ pipeline {
                 }
             }
         }
+
+        stage('Deploy') {
+            steps {
+                echo "🚀 Starting Deployment..."
+
+                dir("${BACKEND_DIR}") {
+                    echo "Starting backend server..."
+                    sh 'nohup npm start &'
+                }
+
+                dir("${FRONTEND_DIR}") {
+                    echo "Serving frontend build..."
+                    sh 'nohup npx serve -s build -l 3000 &'
+                }
+
+                echo "✅ Deployment completed successfully!"
+            }
+        }
     }
 
     post {
@@ -54,27 +72,5 @@ pipeline {
             echo '❌ Pipeline failed. Please check logs.'
         }
     }
-
-    stage('Deploy') {
-        steps {
-            echo "🚀 Starting Deployment..."
-            
-            // Run backend
-            dir('backend/backend-app') {
-                echo "Starting backend server..."
-                sh 'nohup npm start &'
-            }
-
-            // Serve frontend
-            dir('frontend') {
-                echo "Serving frontend build..."
-                sh 'nohup serve -s build -l 3000 &'
-            }
-
-            echo "✅ Deployment completed successfully!"
-        }
-    }
-
-
 }
 
