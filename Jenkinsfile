@@ -4,11 +4,13 @@ pipeline {
     environment {
         BACKEND_DIR = "backend/backend-app"
         FRONTEND_DIR = "frontend"
+        BACKUP_DIR = "backup"
     }
 
     stages {
         stage('Clone Repository') {
             steps {
+                echo "🔄 Cloning repository..."
                 checkout scm
             }
         }
@@ -16,6 +18,7 @@ pipeline {
         stage('Install Backend Dependencies') {
             steps {
                 dir("${BACKEND_DIR}") {
+                    echo "📦 Installing backend dependencies..."
                     sh 'npm install'
                 }
             }
@@ -24,7 +27,17 @@ pipeline {
         stage('Install Frontend Dependencies') {
             steps {
                 dir("${FRONTEND_DIR}") {
+                    echo "📦 Installing frontend dependencies..."
                     sh 'npm install'
+                }
+            }
+        }
+
+        stage('Build Backend') {
+            steps {
+                dir("${BACKEND_DIR}") {
+                    echo "🔨 Building backend..."
+                    sh 'npm run build'
                 }
             }
         }
@@ -32,6 +45,7 @@ pipeline {
         stage('Build Frontend') {
             steps {
                 dir("${FRONTEND_DIR}") {
+                    echo "🔨 Building frontend..."
                     sh 'npm run build'
                 }
             }
@@ -40,26 +54,46 @@ pipeline {
         stage('Run Backend Tests') {
             steps {
                 dir("${BACKEND_DIR}") {
-                    sh 'npm test || echo "No tests found"'
+                    echo "🧪 Running backend tests..."
+                    sh 'npm test || echo "⚠️ Tests failed or not found"'
                 }
             }
         }
 
-        stage('Deploy') {
+        stage('Backup Current Deployment') {
             steps {
-                echo "🚀 Starting Deployment..."
+                echo "💾 Backing up current deployment..."
+                sh '''
+                    mkdir -p ${BACKUP_DIR}
+                    if [ -d "/home/meerali/dist" ]; then
+                        tar -czf ${BACKUP_DIR}/backend-backup-$(date +%s).tar.gz -C /home/meerali dist
+                    fi
+                    if [ -d "/home/meerali/build" ]; then
+                        tar -czf ${BACKUP_DIR}/frontend-backup-$(date +%s).tar.gz -C /home/meerali build
+                    fi
+                '''
+            }
+        }
 
+        stage('Deploy Backend & Frontend via PM2') {
+            steps {
+                echo "🚀 Deploying backend and frontend..."
+
+                // Backend Deployment
                 dir("${BACKEND_DIR}") {
-                    echo "Starting backend server..."
-                    sh 'nohup npm start &'
+                    sh '''
+                    pm2 delete backend-app || true
+                    pm2 start npm --name backend-app -- start
+                    '''
                 }
 
+                // Frontend Deployment (ESM safe)
                 dir("${FRONTEND_DIR}") {
-                    echo "Serving frontend build..."
-                    sh 'nohup npx serve -s build -l 3000 &'
+                    sh '''
+                    pm2 delete react-frontend || true
+                    pm2 start npx --name react-frontend -- serve -s build -l 3000
+                    '''
                 }
-
-                echo "✅ Deployment completed successfully!"
             }
         }
     }
@@ -69,7 +103,7 @@ pipeline {
             echo '✅ Pipeline executed successfully!'
         }
         failure {
-            echo '❌ Pipeline failed. Please check logs.'
+            echo '❌ Pipeline failed! Consider rolling back manually from backup.'
         }
     }
 }
