@@ -15,8 +15,10 @@ describe('AppController', () => {
   });
 
   describe('root', () => {
-    it('should return "Hello World!"', () => {
-      expect(appController.getHello()).toBe('Hello World!');
+	it('should return the custom hello message', () => {
+  expect(appController.getHello()).toBe(
+    'Hello World from Meer Ali Mansoor an Aspiring DevOps Engineer!'
+  );
+});
     });
   });
-});
