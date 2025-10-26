@@ -12,8 +12,8 @@ pipeline {
         BACKEND_ART = "backend-dist.tar.gz"
         FRONTEND_ART = "frontend-build.tar.gz"
         DEPLOY_USER = "meerali"
-        DEPLOY_HOST = "127.0.0.1"  // Change to your server IP
-	DEPLOY_PATH = "/home/meerali/devops/devops-deploy"
+        DEPLOY_HOST = "127.0.0.1"  // Localhost for testing
+        DEPLOY_PATH = "/home/meerali/devops/devops-deploy"
         SSH_CREDENTIALS_ID = "deploy-ssh-creds"  // Jenkins SSH credentials
         SLACK_CHANNEL = "devops-pipeline"  // Change to your Slack channel
     }
@@ -85,21 +85,21 @@ pipeline {
 
                                 # Backup current deployment before deploying new version
                                 ssh -o StrictHostKeyChecking=no ${DEPLOY_USER}@${DEPLOY_HOST} 'bash -s' <<'EOF'
-                                    BACKUP_DIR="${DEPLOY_PATH}/backup_$(date +%Y%m%d%H%M%S)"
+                                    BACKUP_DIR="${DEPLOY_PATH}/backup_\$(date +%Y%m%d%H%M%S)"
                                     DEPLOY_DIR="${DEPLOY_PATH}/deployed-app"
 
-                                    if [ -d "$DEPLOY_DIR" ]; then
-                                        echo "💾 Backing up current deployment to $BACKUP_DIR"
-                                        mkdir -p "$BACKUP_DIR"
-                                        cp -r "$DEPLOY_DIR"/* "$BACKUP_DIR"
+                                    if [ -d "\$DEPLOY_DIR" ]; then
+                                        echo "💾 Backing up current deployment to \$BACKUP_DIR"
+                                        mkdir -p "\$BACKUP_DIR"
+                                        cp -r "\$DEPLOY_DIR"/* "\$BACKUP_DIR"
                                     else
                                         echo "⚠️ No existing deployment found."
                                     fi
 
                                     # Deploy artifacts
-                                    mkdir -p "$DEPLOY_DIR/backend" "$DEPLOY_DIR/frontend"
-                                    tar -xzf ${DEPLOY_PATH}/${BACKEND_ART} -C "$DEPLOY_DIR/backend"
-                                    tar -xzf ${DEPLOY_PATH}/${FRONTEND_ART} -C "$DEPLOY_DIR/frontend"
+                                    mkdir -p "\$DEPLOY_DIR/backend" "\$DEPLOY_DIR/frontend"
+                                    tar -xzf ${DEPLOY_PATH}/${BACKEND_ART} -C "\$DEPLOY_DIR/backend"
+                                    tar -xzf ${DEPLOY_PATH}/${FRONTEND_ART} -C "\$DEPLOY_DIR/frontend"
 
                                     # Cleanup artifact tar files
                                     rm -f ${DEPLOY_PATH}/${BACKEND_ART} ${DEPLOY_PATH}/${FRONTEND_ART}
