@@ -1,0 +1,13 @@
+pipeline {
+    agent any
+    stages {
+        stage('Test SSH Connection') {
+            steps {
+                sshagent(['deploy-ssh-creds']) {
+                    sh 'ssh -o StrictHostKeyChecking=no meerali@your-server-ip "echo Connected successfully!"'
+                }
+            }
+        }
+    }
+}
+
