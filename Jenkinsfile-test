@@ -4,7 +4,7 @@ pipeline {
         stage('Test SSH Connection') {
             steps {
                 sshagent(['deploy-ssh-creds']) {
-                    sh 'ssh -o StrictHostKeyChecking=no meerali@your-server-ip "echo Connected successfully!"'
+                    sh 'ssh -o StrictHostKeyChecking=no meerali@172.24.229.205 "echo Connected successfully!"'
                 }
             }
         }
