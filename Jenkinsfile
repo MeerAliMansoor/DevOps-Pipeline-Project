@@ -33,9 +33,9 @@ pipeline {
                     sh 'npm ci'
                     sh 'npm test || echo "⚠️ Tests failed or not found"'
                     sh 'npm run build'
-                    sh "tar -czf ${BACKEND_ART} -C dist . || (echo 'No dist folder'; exit 1)"
-                    archiveArtifacts artifacts: "${BACKEND_DIR}/${BACKEND_ART}", fingerprint: true
-                }
+		    sh "tar -czf ${BACKEND_ART} -C dist . || (echo 'No dist folder'; exit 1)"
+		    archiveArtifacts artifacts: "${BACKEND_ART}", fingerprint: true
+		}
             }
         }
 
@@ -46,8 +46,8 @@ pipeline {
                     sh 'npm ci'
                     sh 'npm test || echo "⚠️ Frontend tests failed or not found"'
                     sh 'npm run build'
-                    sh "tar -czf ${FRONTEND_ART} -C build . || (echo 'No build folder'; exit 1)"
-                    archiveArtifacts artifacts: "${FRONTEND_DIR}/${FRONTEND_ART}", fingerprint: true
+		    sh "tar -czf ${FRONTEND_ART} -C build . || (echo 'No build folder'; exit 1)"
+		    archiveArtifacts artifacts: "${FRONTEND_ART}", fingerprint: true
                 }
             }
         }
@@ -116,11 +116,19 @@ pipeline {
     post {
         success {
             echo "✅ Pipeline executed successfully!"
-            slackSend(channel: env.SLACK_CHANNEL, message: "✅ Build SUCCESS: ${env.JOB_NAME} #${env.BUILD_NUMBER}")
+ slackSend(
+    channel: env.SLACK_CHANNEL, 
+    tokenCredentialId: 'SLACK_TOKEN', 
+    message: "✅ Build SUCCESS: ${env.JOB_NAME} #${env.BUILD_NUMBER}"
+)
         }
         failure {
             echo "❌ Pipeline failed. Check console and remote logs."
-            slackSend(channel: env.SLACK_CHANNEL, message: "❌ Build FAILED: ${env.JOB_NAME} #${env.BUILD_NUMBER}")
+slackSend(
+    channel: env.SLACK_CHANNEL, 
+    tokenCredentialId: 'SLACK_TOKEN', 
+    message: "❌ Build FAILED: ${env.JOB_NAME} #${env.BUILD_NUMBER}"
+)
         }
     }
 }
