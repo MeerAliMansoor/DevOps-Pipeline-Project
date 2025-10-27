@@ -49,17 +49,16 @@ pipeline {
             steps {
                 script {
                     sshagent([env.SSH_CREDENTIALS]) {
-                        sh """
-                            ssh -o StrictHostKeyChecking=no ${DEPLOY_SERVER} "mkdir -p ${DEPLOY_PATH}/backend ${DEPLOY_PATH}/frontend"
-                        """
+                        // Create directories remotely
+                        sh 'ssh -o StrictHostKeyChecking=no ' + DEPLOY_SERVER + ' "mkdir -p ' + DEPLOY_PATH + '/backend ' + DEPLOY_PATH + '/frontend"'
+
+                        // Unstash locally
                         unstash 'backend'
                         unstash 'frontend'
 
                         // Copy both builds to remote server
-                        sh """
-                            scp -r backend/dist/* ${DEPLOY_SERVER}:${DEPLOY_PATH}/backend/
-                            scp -r frontend/build/* ${DEPLOY_SERVER}:${DEPLOY_PATH}/frontend/
-                        """
+                        sh 'scp -r backend/dist/* ' + DEPLOY_SERVER + ':' + DEPLOY_PATH + '/backend/'
+                        sh 'scp -r frontend/build/* ' + DEPLOY_SERVER + ':' + DEPLOY_PATH + '/frontend/'
                     }
                 }
             }
@@ -72,9 +71,7 @@ pipeline {
 
                     try {
                         sshagent([env.SSH_CREDENTIALS]) {
-                            sh """
-                                ssh -o StrictHostKeyChecking=no ${DEPLOY_SERVER} "echo '🔁 Running deployment script...' && bash ${DEPLOY_SCRIPT}"
-                            """
+                            sh 'ssh -o StrictHostKeyChecking=no ' + DEPLOY_SERVER + ' "echo Running deployment script && bash ' + DEPLOY_SCRIPT + '"'
                         }
 
                         slackSend(channel: env.SLACK_CHANNEL, message: "✅ *Deployment successful!* for *${env.JOB_NAME}* #${env.BUILD_NUMBER}")
@@ -82,20 +79,11 @@ pipeline {
                         slackSend(channel: env.SLACK_CHANNEL, message: "❌ *Deployment failed!* Rolling back to previous version...")
 
                         sshagent([env.SSH_CREDENTIALS]) {
-                            sh """
-                                ssh -o StrictHostKeyChecking=no ${DEPLOY_SERVER} "echo '🔄 Rolling back deployment...' &&
-                                LATEST_BACKUP=$(ls -t ${BACKUP_DIR}/backend-*.tar.gz | head -n1) &&
-                                if [ -f \"$LATEST_BACKUP\" ]; then
-                                    tar -xzf \"$LATEST_BACKUP\" -C /home/meerali/dist
-                                    echo '✅ Rollback complete for backend.'
-                                fi
-
-                                LATEST_FE_BACKUP=$(ls -t ${BACKUP_DIR}/frontend-*.tar.gz | head -n1) &&
-                                if [ -f \"$LATEST_FE_BACKUP\" ]; then
-                                    tar -xzf \"$LATEST_FE_BACKUP\" -C /home/meerali/build
-                                    echo '✅ Rollback complete for frontend.'
-                                fi"
-                            """
+                            sh 'ssh -o StrictHostKeyChecking=no ' + DEPLOY_SERVER + ' "echo Rolling back deployment... && ' +
+                               'LATEST_BACKUP=$(ls -t ' + BACKUP_DIR + '/backend-*.tar.gz 2>/dev/null | head -n1); ' +
+                               'if [ -f \\"$LATEST_BACKUP\\" ]; then tar -xzf \\"$LATEST_BACKUP\\" -C /home/meerali/dist && echo Backend rollback complete; fi; ' +
+                               'LATEST_FE_BACKUP=$(ls -t ' + BACKUP_DIR + '/frontend-*.tar.gz 2>/dev/null | head -n1); ' +
+                               'if [ -f \\"$LATEST_FE_BACKUP\\" ]; then tar -xzf \\"$LATEST_FE_BACKUP\\" -C /home/meerali/build && echo Frontend rollback complete; fi"'
                         }
 
                         error("Deployment failed and rollback executed.")
