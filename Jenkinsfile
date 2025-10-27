@@ -3,7 +3,7 @@ pipeline {
 
     environment {
         // Slack credentials and channel
-        SLACK_CHANNEL = = "#devopsnotifications"
+        SLACK_CHANNEL = "#devopsnotifications"
         SLACK_TOKEN = credentials('SLACK_TOKEN')
 
         // SSH credentials and server details
