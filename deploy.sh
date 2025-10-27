@@ -7,13 +7,11 @@ set -e  # Exit immediately if any command fails
 TIMESTAMP=$(date +%F-%T)
 echo "🕒 Deployment started at $TIMESTAMP"
 
-# =========================
-# Directory Paths
-# =========================
-DEPLOY_DIR="/home/meerali/devops/devops-deploy"
-BACKEND_DIR="$DEPLOY_DIR/backend/backend-app"
-FRONTEND_DIR="$DEPLOY_DIR/frontend"
-BACKUP_DIR="/home/meerali/devops/backup"
+# Base directories
+DEPLOY_BASE="/home/meerali/devops/devops-deploy"
+BACKEND_DIR="$DEPLOY_BASE/backend"
+FRONTEND_DIR="$DEPLOY_BASE/frontend"
+BACKUP_DIR="$DEPLOY_BASE/backup"
 
 # =========================
 # Backup current deployments
