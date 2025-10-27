@@ -7,11 +7,13 @@ set -e  # Exit immediately if any command fails
 TIMESTAMP=$(date +%F-%T)
 echo "🕒 Deployment started at $TIMESTAMP"
 
-# Base directories
-DEPLOY_BASE="/home/meerali"
-BACKEND_DIR="$DEPLOY_BASE/backend/backend-app"
-FRONTEND_DIR="$DEPLOY_BASE/frontend"
-BACKUP_DIR="$DEPLOY_BASE/backup"
+# =========================
+# Directory Paths
+# =========================
+DEPLOY_DIR="/home/meerali/devops/devops-deploy"
+BACKEND_DIR="$DEPLOY_DIR/backend/backend-app"
+FRONTEND_DIR="$DEPLOY_DIR/frontend"
+BACKUP_DIR="/home/meerali/devops/backup"
 
 # =========================
 # Backup current deployments
@@ -47,7 +49,7 @@ npm run build
 
 echo "🔁 Restarting backend with PM2..."
 pm2 delete backend-app || true
-pm2 start dist/main.js --name backend-app --interpreter node --cwd "BACKEND-DIR"
+pm2 start dist/main.js --name backend-app --interpreter node
 pm2 save
 
 echo "✅ Backend deployed successfully."
