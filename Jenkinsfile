@@ -8,7 +8,7 @@ pipeline {
 
         // SSH credentials and server details
         SSH_CREDENTIALS = 'ssh-server-creds'
-        DEPLOY_SERVER = 'meerali@127.0.0'
+        DEPLOY_SERVER = 'meerali@127.0.0.1'
 
         // Deployment paths
         DEPLOY_PATH = '/home/meerali/devops/devops-deploy'
@@ -50,7 +50,7 @@ pipeline {
                 script {
                     sshagent([env.SSH_CREDENTIALS]) {
                         sh """
-                            ssh -o StrictHostKeyChecking=no ${DEPLOY_SERVER} 'mkdir -p ${DEPLOY_PATH}/backend ${DEPLOY_PATH}/frontend'
+                            ssh -o StrictHostKeyChecking=no ${DEPLOY_SERVER} "mkdir -p ${DEPLOY_PATH}/backend ${DEPLOY_PATH}/frontend"
                         """
                         unstash 'backend'
                         unstash 'frontend'
@@ -73,10 +73,7 @@ pipeline {
                     try {
                         sshagent([env.SSH_CREDENTIALS]) {
                             sh """
-                                ssh -o StrictHostKeyChecking=no ${DEPLOY_SERVER} '
-                                echo "🔁 Running deployment script..." &&
-                                bash ${DEPLOY_SCRIPT}
-                                '
+                                ssh -o StrictHostKeyChecking=no ${DEPLOY_SERVER} "echo '🔁 Running deployment script...' && bash ${DEPLOY_SCRIPT}"
                             """
                         }
 
@@ -86,20 +83,18 @@ pipeline {
 
                         sshagent([env.SSH_CREDENTIALS]) {
                             sh """
-                                ssh -o StrictHostKeyChecking=no ${DEPLOY_SERVER} '
-                                echo "🔄 Rolling back deployment..." &&
+                                ssh -o StrictHostKeyChecking=no ${DEPLOY_SERVER} "echo '🔄 Rolling back deployment...' &&
                                 LATEST_BACKUP=$(ls -t ${BACKUP_DIR}/backend-*.tar.gz | head -n1) &&
-                                if [ -f "$LATEST_BACKUP" ]; then
-                                    tar -xzf "$LATEST_BACKUP" -C /home/meerali/dist
-                                    echo "✅ Rollback complete for backend."
+                                if [ -f \"$LATEST_BACKUP\" ]; then
+                                    tar -xzf \"$LATEST_BACKUP\" -C /home/meerali/dist
+                                    echo '✅ Rollback complete for backend.'
                                 fi
-                                
+
                                 LATEST_FE_BACKUP=$(ls -t ${BACKUP_DIR}/frontend-*.tar.gz | head -n1) &&
-                                if [ -f "$LATEST_FE_BACKUP" ]; then
-                                    tar -xzf "$LATEST_FE_BACKUP" -C /home/meerali/build
-                                    echo "✅ Rollback complete for frontend."
-                                fi
-                                '
+                                if [ -f \"$LATEST_FE_BACKUP\" ]; then
+                                    tar -xzf \"$LATEST_FE_BACKUP\" -C /home/meerali/build
+                                    echo '✅ Rollback complete for frontend.'
+                                fi"
                             """
                         }
 
