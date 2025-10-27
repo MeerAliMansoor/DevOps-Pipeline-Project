@@ -7,7 +7,7 @@ pipeline {
         SLACK_TOKEN = credentials('SLACK_TOKEN')
 
         // SSH credentials and server details
-        SSH_CREDENTIALS = 'ssh-server-creds'
+        SSH_CREDENTIALS = 'deploy-ssh-creds'
         DEPLOY_SERVER = 'meerali@127.0.0.1'
 
         // Deployment paths
