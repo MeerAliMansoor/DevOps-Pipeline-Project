@@ -47,7 +47,7 @@ npm run build
 
 echo "🔁 Restarting backend with PM2..."
 pm2 delete backend-app || true
-pm2 start dist/main.js --name backend-app --interpreter node
+pm2 start dist/main.js --name backend-app --interpreter node --cwd "BACKEND-DIR"
 pm2 save
 
 echo "✅ Backend deployed successfully."
