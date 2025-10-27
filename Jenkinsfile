@@ -28,7 +28,7 @@ pipeline {
         stage('Build Backend') {
             steps {
                 dir('backend/backend-app') {
-                    sh 'npm ci --omit=dev'
+                    sh 'npm install'
                     sh 'npm run build'
                     stash includes: 'dist/**', name: 'backend'
                 }
@@ -38,7 +38,7 @@ pipeline {
         stage('Build Frontend') {
             steps {
                 dir('frontend') {
-                    sh 'npm ci --omit=dev'
+                    sh 'npm install'
                     sh 'npm run build'
                     stash includes: 'build/**', name: 'frontend'
                 }
@@ -56,7 +56,7 @@ pipeline {
                         unstash 'backend'
                         unstash 'frontend'
 
-                        // Copy both builds to remote server
+                        // Copy builds to remote server
                         sh """scp -r backend/backend-app/dist/* ${DEPLOY_SERVER}:${DEPLOY_PATH}/backend/"""
                         sh """scp -r frontend/build/* ${DEPLOY_SERVER}:${DEPLOY_PATH}/frontend/"""
                     }
@@ -79,11 +79,13 @@ pipeline {
                         slackSend(channel: env.SLACK_CHANNEL, message: "❌ *Deployment failed!* Rolling back to previous version...")
 
                         sshagent([env.SSH_CREDENTIALS]) {
-                            sh """ssh -o StrictHostKeyChecking=no ${DEPLOY_SERVER} 'echo Rolling back deployment... && \
-LATEST_BE_BACKUP=$(ls -t ${BACKUP_DIR}/backend-*.tar.gz 2>/dev/null | head -n1); \
-if [ -f "$LATEST_BE_BACKUP" ]; then tar -xzf "$LATEST_BE_BACKUP" -C ${DEPLOY_PATH}/backend && echo "✅ Backend rollback complete"; fi; \
-LATEST_FE_BACKUP=$(ls -t ${BACKUP_DIR}/frontend-*.tar.gz 2>/dev/null | head -n1); \
-if [ -f "$LATEST_FE_BACKUP" ]; then tar -xzf "$LATEST_FE_BACKUP" -C ${DEPLOY_PATH}/frontend && echo "✅ Frontend rollback complete"; fi'"""
+                            sh """
+                            ssh -o StrictHostKeyChecking=no ${DEPLOY_SERVER} "echo Rolling back deployment... && \
+LATEST_BE_BACKUP=\\\$(ls -t ${BACKUP_DIR}/backend-*.tar.gz 2>/dev/null | head -n1); \
+if [ -f \\\"\$LATEST_BE_BACKUP\\\" ]; then tar -xzf \\\"\$LATEST_BE_BACKUP\\\" -C ${DEPLOY_PATH}/backend && echo '✅ Backend rollback complete'; fi; \
+LATEST_FE_BACKUP=\\\$(ls -t ${BACKUP_DIR}/frontend-*.tar.gz 2>/dev/null | head -n1); \
+if [ -f \\\"\$LATEST_FE_BACKUP\\\" ]; then tar -xzf \\\"\$LATEST_FE_BACKUP\\\" -C ${DEPLOY_PATH}/frontend && echo '✅ Frontend rollback complete'; fi"
+                            """
                         }
 
                         error("Deployment failed and rollback executed.")
