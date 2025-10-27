@@ -28,7 +28,7 @@ pipeline {
         stage('Build Backend') {
             steps {
                 dir('backend/backend-app') {
-                    sh 'npm install'
+                    sh 'npm ci --omit=dev'
                     sh 'npm run build'
                     stash includes: 'dist/**', name: 'backend'
                 }
@@ -38,7 +38,7 @@ pipeline {
         stage('Build Frontend') {
             steps {
                 dir('frontend') {
-                    sh 'npm install'
+                    sh 'npm ci --omit=dev'
                     sh 'npm run build'
                     stash includes: 'build/**', name: 'frontend'
                 }
@@ -79,11 +79,11 @@ pipeline {
                         slackSend(channel: env.SLACK_CHANNEL, message: "❌ *Deployment failed!* Rolling back to previous version...")
 
                         sshagent([env.SSH_CREDENTIALS]) {
-                            sh '''ssh -o StrictHostKeyChecking=no meerali@127.0.0.1 "echo Rolling back deployment... && \
-LATEST_BACKUP=$(ls -t /home/meerali/devops/backup/backend-*.tar.gz 2>/dev/null | head -n1); \
-if [ -f \"$LATEST_BACKUP\" ]; then tar -xzf \"$LATEST_BACKUP\" -C /home/meerali/dist && echo Backend rollback complete; fi; \
-LATEST_FE_BACKUP=$(ls -t /home/meerali/devops/backup/frontend-*.tar.gz 2>/dev/null | head -n1); \
-if [ -f \"$LATEST_FE_BACKUP\" ]; then tar -xzf \"$LATEST_FE_BACKUP\" -C /home/meerali/build && echo Frontend rollback complete; fi"'''
+                            sh """ssh -o StrictHostKeyChecking=no ${DEPLOY_SERVER} 'echo Rolling back deployment... && \
+LATEST_BE_BACKUP=$(ls -t ${BACKUP_DIR}/backend-*.tar.gz 2>/dev/null | head -n1); \
+if [ -f "$LATEST_BE_BACKUP" ]; then tar -xzf "$LATEST_BE_BACKUP" -C ${DEPLOY_PATH}/backend && echo "✅ Backend rollback complete"; fi; \
+LATEST_FE_BACKUP=$(ls -t ${BACKUP_DIR}/frontend-*.tar.gz 2>/dev/null | head -n1); \
+if [ -f "$LATEST_FE_BACKUP" ]; then tar -xzf "$LATEST_FE_BACKUP" -C ${DEPLOY_PATH}/frontend && echo "✅ Frontend rollback complete"; fi'"""
                         }
 
                         error("Deployment failed and rollback executed.")
