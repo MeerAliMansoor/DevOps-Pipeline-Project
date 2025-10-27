@@ -15,7 +15,7 @@ pipeline {
         DEPLOY_HOST = "127.0.0.1"  // Localhost for testing
         DEPLOY_PATH = "/home/meerali/devops/devops-deploy"
         SSH_CREDENTIALS_ID = "deploy-ssh-creds"  // Jenkins SSH credentials
-        SLACK_CHANNEL = "devopsnotifications"  // Change to your Slack channel
+        SLACK_CHANNEL = "#devopsnotifications"  // Change to your Slack channel
     }
 
     stages {
