@@ -40,7 +40,7 @@ echo "🚀 Deploying backend..."
 cd "$BACKEND_DIR" || { echo "❌ Backend directory not found!"; exit 1; }
 
 echo "📦 Installing dependencies..."
-npm ci --omit=dev
+npm install --production
 
 echo "🏗️ Building backend..."
 npm run build
@@ -59,7 +59,7 @@ echo "🚀 Deploying frontend..."
 cd "$FRONTEND_DIR" || { echo "❌ Frontend directory not found!"; exit 1; }
 
 echo "📦 Installing dependencies..."
-npm ci --omit=dev
+npm install --production
 
 echo "🏗️ Building frontend..."
 npm run build
