@@ -1,3 +1,4 @@
+
 pipeline {
     agent any
 
@@ -15,7 +16,7 @@ pipeline {
         // Project paths (in repo)
         BACKEND_SRC_PATH = 'backend/backend-app'   // you confirmed: devops/backend/backend-app
         FRONTEND_SRC_PATH= 'frontend'             // you confirmed: devops/frontend
-        DOCKER_COMPOSE   = 'devops/docker-compose.yml'
+        DOCKER_COMPOSE   = 'docker-compose.yml'
     }
 
     stages {
