@@ -2,94 +2,107 @@ pipeline {
     agent any
 
     environment {
-        SLACK_CHANNEL = "#devopsnotifications"
-        SLACK_TOKEN = credentials('SLACK_TOKEN')
+        SLACK_CHANNEL    = "#devopsnotifications"
+        SLACK_TOKEN      = credentials('SLACK_TOKEN')
 
-        SSH_CREDENTIALS = 'deploy-ssh-creds'
-        DEPLOY_SERVER = 'meerali@127.0.0.1'
+        SSH_CREDENTIALS  = 'deploy-ssh-creds'
+        DEPLOY_SERVER    = 'meerali@127.0.0.1'
 
-        DEPLOY_PATH = '/home/meerali/devops/devops-deploy'
-        BACKUP_DIR = '/home/meerali/devops/backup'
+        DEPLOY_PATH      = '/home/meerali/devops/devops-deploy'
+        DEPLOY_SCRIPT    = '/home/meerali/devops/deploy-docker.sh'
+        BACKUP_DIR       = '/home/meerali/devops/backup'
 
-        BACKEND_IMAGE = 'backend-app:latest'
-        FRONTEND_IMAGE = 'frontend-app:latest'
-        BACKEND_CONTAINER = 'backend-container'
-        FRONTEND_CONTAINER = 'frontend-container'
+        // Project paths (in repo)
+        BACKEND_SRC_PATH = 'devops/backend/backend-app'   // you confirmed: devops/backend/backend-app
+        FRONTEND_SRC_PATH= 'devops/frontend'             // you confirmed: devops/frontend
+        DOCKER_COMPOSE   = 'devops/docker-compose.yml'
     }
 
     stages {
         stage('Checkout') {
             steps {
-                slackSend(channel: env.SLACK_CHANNEL, message: "📦 Starting Docker build for *${env.JOB_NAME}* #${env.BUILD_NUMBER}")
+                echo "🔄 Checkout repository"
                 checkout scm
+                slackSend(channel: env.SLACK_CHANNEL, tokenCredentialId: 'SLACK_TOKEN', message: "📦 Starting build: ${env.JOB_NAME} #${env.BUILD_NUMBER}")
             }
         }
 
-        stage('Build Backend Docker Image') {
+        stage('Build Backend') {
             steps {
-                dir('backend/backend-app') {
-                    sh 'docker build -t $BACKEND_IMAGE .'
+                dir("${BACKEND_SRC_PATH}") {
+                    echo "📦 Backend: install & build"
+                    sh 'npm ci || npm install'
+                    sh 'npm test || echo "⚠️ Backend tests skipped or failed (non-blocking)"'
+                    sh 'npm run build'
                 }
+                // package backend source (tar) for transfer
+                sh """
+                    tar -czf ${WORKSPACE}/backend-src.tar.gz -C ${WORKSPACE}/${BACKEND_SRC_PATH} .
+                    ls -lh ${WORKSPACE}/backend-src.tar.gz
+                """
+                archiveArtifacts artifacts: 'backend-src.tar.gz', fingerprint: true
             }
         }
 
-        stage('Build Frontend Docker Image') {
+        stage('Build Frontend') {
             steps {
-                dir('frontend') {
-                    sh 'docker build -t $FRONTEND_IMAGE .'
+                dir("${FRONTEND_SRC_PATH}") {
+                    echo "📦 Frontend: install & build"
+                    sh 'npm ci || npm install'
+                    sh 'npm test || echo "⚠️ Frontend tests skipped or failed (non-blocking)"'
+                    sh 'npm run build'
                 }
+                // package frontend source (tar) for transfer
+                sh """
+                    tar -czf ${WORKSPACE}/frontend-src.tar.gz -C ${WORKSPACE}/${FRONTEND_SRC_PATH} .
+                    ls -lh ${WORKSPACE}/frontend-src.tar.gz
+                """
+                archiveArtifacts artifacts: 'frontend-src.tar.gz', fingerprint: true
             }
         }
 
-        stage('Deploy via SSH & Docker') {
+        stage('Prepare transfer files') {
+            steps {
+                // Ensure docker-compose and deploy script exist
+                script {
+                    if (!fileExists("${DOCKER_COMPOSE}")) {
+                        error("docker-compose.yml not found at ${DOCKER_COMPOSE}. Please add it to repo at devops/docker-compose.yml")
+                    }
+                    if (!fileExists("devops/deploy-docker.sh")) {
+                        error("deploy-docker.sh not found at devops/deploy-docker.sh. Please add it (I provided one) and commit.")
+                    }
+                }
+                sh "ls -la devops || true"
+            }
+        }
+
+        stage('Transfer to target server') {
             steps {
                 script {
-                    slackSend(channel: env.SLACK_CHANNEL, message: "🚀 Deploying *${env.JOB_NAME}* #${env.BUILD_NUMBER} via Docker...")
+                    sshagent([env.SSH_CREDENTIALS]) {
+                        echo "📡 Creating remote directories: ${DEPLOY_PATH}"
+                        sh "ssh -o StrictHostKeyChecking=no ${DEPLOY_SERVER} \"mkdir -p ${DEPLOY_PATH} ${BACKUP_DIR}\""
 
-                    try {
-                        sshagent([env.SSH_CREDENTIALS]) {
-                            sh """
-                            ssh -o StrictHostKeyChecking=no ${DEPLOY_SERVER} '
-                                echo "🧹 Cleaning up old containers..."
-                                docker stop ${BACKEND_CONTAINER} || true &&
-                                docker rm ${BACKEND_CONTAINER} || true &&
-                                docker stop ${FRONTEND_CONTAINER} || true &&
-                                docker rm ${FRONTEND_CONTAINER} || true &&
+                        echo "📤 Copying packaged sources and compose file + deploy script"
+                        sh "scp -o StrictHostKeyChecking=no ${WORKSPACE}/backend-src.tar.gz ${DEPLOY_SERVER}:${DEPLOY_PATH}/backend-src.tar.gz"
+                        sh "scp -o StrictHostKeyChecking=no ${WORKSPACE}/frontend-src.tar.gz ${DEPLOY_SERVER}:${DEPLOY_PATH}/frontend-src.tar.gz"
+                        sh "scp -o StrictHostKeyChecking=no ${WORKSPACE}/${DOCKER_COMPOSE} ${DEPLOY_SERVER}:${DEPLOY_PATH}/docker-compose.yml"
+                        sh "scp -o StrictHostKeyChecking=no ${WORKSPACE}/devops/deploy-docker.sh ${DEPLOY_SERVER}:${DEPLOY_PATH}/deploy-docker.sh"
+                        // set executable
+                        sh "ssh -o StrictHostKeyChecking=no ${DEPLOY_SERVER} \"chmod +x ${DEPLOY_PATH}/deploy-docker.sh\""
+                    }
+                }
+            }
+        }
 
-                                echo "📦 Running new backend container..."
-                                docker run -d --name ${BACKEND_CONTAINER} -p 5000:5000 ${BACKEND_IMAGE} &&
-
-                                echo "🌐 Running new frontend container..."
-                                docker run -d --name ${FRONTEND_CONTAINER} -p 3000:3000 ${FRONTEND_IMAGE}
-                            '
-                            """
-                        }
-
-                        slackSend(channel: env.SLACK_CHANNEL, message: "✅ Deployment successful for *${env.JOB_NAME}* #${env.BUILD_NUMBER}")
-
-                    } catch (err) {
-                        slackSend(channel: env.SLACK_CHANNEL, message: "❌ Deployment failed! Attempting rollback...")
-
-                        sshagent([env.SSH_CREDENTIALS]) {
-                            sh """
-                            ssh -o StrictHostKeyChecking=no ${DEPLOY_SERVER} '
-                                echo "🔙 Rolling back to previous Docker containers..."
-                                docker stop ${BACKEND_CONTAINER} || true &&
-                                docker rm ${BACKEND_CONTAINER} || true &&
-                                docker stop ${FRONTEND_CONTAINER} || true &&
-                                docker rm ${FRONTEND_CONTAINER} || true &&
-
-                                # Optional: Start previous versions if tagged properly
-                                echo "♻️ Starting last known stable images (if exist)..."
-                                docker run -d --name ${BACKEND_CONTAINER} -p 5000:5000 ${BACKEND_IMAGE} ||
-                                echo "⚠️ No previous backend image found" &&
-                                docker run -d --name ${FRONTEND_CONTAINER} -p 3000:3000 ${FRONTEND_IMAGE} ||
-                                echo "⚠️ No previous frontend image found"
-                            '
-                            """
-                        }
-
-                        error("Deployment failed. Rollback attempted if images existed.")
+        stage('Deploy on remote via Docker Compose') {
+            steps {
+                script {
+                    slackSend(channel: env.SLACK_CHANNEL, tokenCredentialId: 'SLACK_TOKEN', message: "🚀 Deploying ${env.JOB_NAME} #${env.BUILD_NUMBER} to ${DEPLOY_SERVER}")
+                    sshagent([env.SSH_CREDENTIALS]) {
+                        // Execute the remote deploy script (it will build images & run docker compose).
+                        // We run it with bash to ensure exit code propagation.
+                        sh "ssh -o StrictHostKeyChecking=no ${DEPLOY_SERVER} \"bash ${DEPLOY_PATH}/deploy-docker.sh ${DEPLOY_PATH} ${BACKUP_DIR} || exit 1\""
                     }
                 }
             }
@@ -97,16 +110,16 @@ pipeline {
     }
 
     post {
-        always {
+        success {
+            slackSend(channel: env.SLACK_CHANNEL, tokenCredentialId: 'SLACK_TOKEN', message: "✅ Build & Deploy SUCCESS: ${env.JOB_NAME} #${env.BUILD_NUMBER}")
             cleanWs()
         }
-
         failure {
-            slackSend(channel: env.SLACK_CHANNEL, message: "🔴 Build failed for *${env.JOB_NAME}* #${env.BUILD_NUMBER}")
+            slackSend(channel: env.SLACK_CHANNEL, tokenCredentialId: 'SLACK_TOKEN', message: "❌ Build or Deploy FAILED: ${env.JOB_NAME} #${env.BUILD_NUMBER}")
+            cleanWs()
         }
-
-        success {
-            slackSend(channel: env.SLACK_CHANNEL, message: "🟢 Build passed for *${env.JOB_NAME}* #${env.BUILD_NUMBER}")
+        always {
+            echo "🔚 Pipeline finished for ${env.JOB_NAME} #${env.BUILD_NUMBER}"
         }
     }
 }
