@@ -10,7 +10,7 @@ pipeline {
         DEPLOY_SERVER    = 'meerali@127.0.0.1'
 
         DEPLOY_PATH      = '/home/meerali/devops/devops-deploy'
-        DEPLOY_SCRIPT    = '/home/meerali/deploy-docker.sh'
+        DEPLOY_SCRIPT    = 'deploy-docker.sh'
         BACKUP_DIR       = '/home/meerali/devops/backup'
 
         // Project paths (in repo)
