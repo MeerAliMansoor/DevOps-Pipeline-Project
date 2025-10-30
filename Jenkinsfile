@@ -69,7 +69,7 @@ pipeline {
                     if (!fileExists("${DOCKER_COMPOSE}")) {
                         error("docker-compose.yml not found at ${DOCKER_COMPOSE}. Please add it to repo at devops/docker-compose.yml")
                     }
-                    if (!fileExists("devops/deploy-docker.sh")) {
+                    if (!fileExists("deploy-docker.sh")) {
                         error("deploy-docker.sh not found at devops/deploy-docker.sh. Please add it (I provided one) and commit.")
                     }
                 }
