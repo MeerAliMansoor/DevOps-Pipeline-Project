@@ -9,7 +9,7 @@ pipeline {
         SSH_CREDENTIALS  = 'deploy-ssh-creds'
         DEPLOY_SERVER    = 'meerali@127.0.0.1'
 
-        DEPLOY_PATH      = '/home/meerali/devops/devops-deploy'
+        DEPLOY_PATH      = 'devops-deploy'
         DEPLOY_SCRIPT    = 'deploy-docker.sh'
         BACKUP_DIR       = '/home/meerali/devops/backup'
 
