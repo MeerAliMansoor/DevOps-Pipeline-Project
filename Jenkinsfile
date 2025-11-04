@@ -88,7 +88,7 @@ pipeline {
                         sh "scp -o StrictHostKeyChecking=no ${WORKSPACE}/backend-src.tar.gz ${DEPLOY_SERVER}:${DEPLOY_PATH}/backend-src.tar.gz"
                         sh "scp -o StrictHostKeyChecking=no ${WORKSPACE}/frontend-src.tar.gz ${DEPLOY_SERVER}:${DEPLOY_PATH}/frontend-src.tar.gz"
                         sh "scp -o StrictHostKeyChecking=no ${WORKSPACE}/${DOCKER_COMPOSE} ${DEPLOY_SERVER}:${DEPLOY_PATH}/docker-compose.yml"
-                        sh "scp -o StrictHostKeyChecking=no ${WORKSPACE}/devops/deploy-docker.sh ${DEPLOY_SERVER}:${DEPLOY_PATH}/deploy-docker.sh"
+                        sh "scp -o StrictHostKeyChecking=no ${WORKSPACE}/deploy-docker.sh ${DEPLOY_SERVER}:${DEPLOY_PATH}/deploy-docker.sh"
                         // set executable
                         sh "ssh -o StrictHostKeyChecking=no ${DEPLOY_SERVER} \"chmod +x ${DEPLOY_PATH}/deploy-docker.sh\""
                     }
